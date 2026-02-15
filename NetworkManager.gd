@@ -30,26 +30,29 @@ func _process(_delta):
 # --- LÓGICA DEL ANFITRIÓN (HOST) ---
 
 func crear_partida_steam():
-	# 1. Cerramos el peer actual de forma segura si existe
-	if multiplayer.multiplayer_peer != null:
+	# 1. Limpieza total de cualquier rastro previo
+	if multiplayer.multiplayer_peer:
 		multiplayer.multiplayer_peer.close()
-	
 	multiplayer.multiplayer_peer = null
-	peer = SteamMultiplayerPeer.new() 
 	
 	print("Limpieza de socket completada. Creando lobby...")
 	id_del_lobby_actual = 0
+	# Pedimos a Steam que cree la sala
 	Steam.createLobby(Steam.LOBBY_TYPE_FRIENDS_ONLY, 4)
 
 func _on_lobby_created(result: int, lobby_id: int):
 	if result == 1:
 		id_del_lobby_actual = lobby_id
-		var error = peer.create_host(lobby_id)
+		
+		# 2. IMPORTANTE: Creamos un peer NUEVO exactamente aquí
+		var fresh_peer = SteamMultiplayerPeer.new()
+		var error = fresh_peer.create_host(lobby_id)
+		
 		if error == OK:
+			peer = fresh_peer # Actualizamos nuestra variable global
 			multiplayer.multiplayer_peer = peer
 			print("Lobby creado y Guardado: ", id_del_lobby_actual)
 		else:
-			# Esto te dirá exactamente qué código de error da Godot
 			print("Error crítico al crear Host: ", error) 
 	else:
 		print("Steam no pudo crear el lobby. Resultado: ", result)
