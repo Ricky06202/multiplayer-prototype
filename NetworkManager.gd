@@ -1,29 +1,53 @@
 extends Node
 
-var peer = ENetMultiplayerPeer.new()
-@export var player_scene : PackedScene = preload("res://Player.tscn")
-var port = 1027
+# El "motor" de red que usa Steam
+var peer = SteamMultiplayerPeer.new()
+var id_del_lobby_actual: int = 0
 
 func _ready():
-	multiplayer.connected_to_server.connect(_on_connection_success)
+	Steam.steamInit(480)
+	Steam.lobby_created.connect(_on_lobby_created)
+	Steam.join_requested.connect(_on_lobby_join_requested)
 
-func _on_connection_success():
-	# El cliente se cambia a sí mismo de escena manualmente
-	get_tree().change_scene_to_file("res://World.tscn")
+func _process(_delta):
+	# Esto es vital para que Steam envíe las señales a Godot
+	Steam.run_callbacks()
+	
+# --- LÓGICA DEL ANFITRIÓN (HOST) ---
 
-func host_game():
-	peer.create_server(port)
-	multiplayer.multiplayer_peer = peer
-	# Al hacer esto siendo el servidor, Godot le dirá a 
-	# todos los que se conecten: "Oigan, cámbiense a esta escena"
-	get_tree().change_scene_to_file("res://World.tscn")
+func crear_partida_steam():
+	print("Creando lobby en Steam...")
+	# Creamos el lobby (Tipo Amigos, Max 4 personas)
+	id_del_lobby_actual = 0
+	Steam.createLobby(Steam.LOBBY_TYPE_FRIENDS_ONLY, 4)
 
-func join_game(address):
-	peer.create_client(address, port)
-	multiplayer.multiplayer_peer = peer
-	# AQUÍ NO CAMBIAMOS LA ESCENA. 
-	# Esperamos a que el servidor nos arrastre.
+func _on_lobby_created(result: int, lobby_id: int):
+	if result == 1:
+		id_del_lobby_actual = lobby_id # <--- Aquí se guarda
+		var error = peer.create_host(lobby_id)
+		if error == OK:
+			multiplayer.multiplayer_peer = peer
+			print("Lobby creado y Guardado: ", id_del_lobby_actual)
+# --- LÓGICA DE INVITACIONES ---
 
-func _on_player_connected(id):
-	print("Jugador conectado con ID: ", id)
-	# Aquí es donde el MultiplayerSpawner del mundo entrará en acción
+# Esto se activa cuando tu amigo te invita y tú aceptas desde el chat de Steam
+func _on_lobby_join_requested(lobby_id: int, friend_id: int):
+	print("Uniéndose a la partida de: ", Steam.getFriendPersonaName(friend_id))
+	unirse_a_partida_por_id(lobby_id)
+
+func unirse_a_partida_por_id(lobby_id: int):
+	# Ya no usamos IPs, usamos el ID del Lobby o del Usuario
+	var error = peer.create_client(lobby_id) 
+	if error == OK:
+		multiplayer.multiplayer_peer = peer
+	else:
+		print("Error al unirse: ", error)
+
+# --- EXTRAS ÚTILES ---
+
+func invitar_amigos():
+	# Usamos nuestra variable guardada en lugar de pedírsela al peer
+	if id_del_lobby_actual > 0:
+		Steam.activateGameOverlayInviteDialog(id_del_lobby_actual)
+	else:
+		print("Error: No hay un ID de lobby guardado. ¿Ya hiciste Host?")

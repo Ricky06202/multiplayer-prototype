@@ -29,4 +29,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.54432875, 0)
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=1210539097]
 replication_config = SubResource("SceneReplicationConfig_kpjcp")
 
+[node name="LabelNombre" type="Label3D" parent="." unique_id=745628829]
+transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, 0, 1.2563268, 0)
+text = "Nombre"
+
 [connection signal="tree_entered" from="." to="." method="_on_tree_entered"]

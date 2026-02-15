@@ -1,17 +1,16 @@
 extends Control
 
-@onready var ip_input = $HBoxContainer/IPAddress
-
 func _on_host_pressed() -> void:
-	# Llamamos al Singleton para que cree el servidor
-	NetworkManager.host_game()
-	# El Singleton se encargará de cambiar la escena a "World.tscn"
-	hide()
+	# 1. Le pedimos al Singleton que empiece a crear el lobby de Steam de fondo
+	NetworkManager.crear_partida_steam()
+	
+	# 2. Cambiamos de escena inmediatamente al mundo
+	# Así el Host ya puede empezar a caminar mientras Steam termina de conectar
+	get_tree().change_scene_to_file("res://World.tscn")
 
 func _on_join_pressed() -> void:
-	var address = ip_input.text
-	if address.is_empty():
-		address = "127.0.0.1"
-	
-	NetworkManager.join_game(address)
-	hide()
+	# Si vas a usar el sistema de invitaciones de Steam, 
+	# técnicamente no necesitas un botón de "Join" en el menú, 
+	# porque Steam abre el juego solo cuando aceptas la invitación.
+	# Pero puedes dejarlo para abrir la lista de amigos:
+	Steam.activateGameOverlay("friends")
