@@ -4,23 +4,35 @@ extends Node3D
 var player_scene = preload("res://Player.tscn")
 
 func _ready():
+	# Solo el Host (servidor) tiene el poder de instanciar nodos que se sincronizan
 	if multiplayer.is_server():
-		add_player(1) # Spawnea al Host
+		# Conectamos la señal para detectar nuevos amigos
+		multiplayer.peer_connected.connect(_on_peer_connected)
+		# Nos spawneamos a nosotros mismos (el Host siempre es ID 1)
+		add_player(1)
 	else:
-		# El cliente le avisa al servidor: "Ya terminé de cargar el mapa"
-		tell_server_i_am_ready.rpc_id(1)
+		# Si soy cliente, opcionalmente puedo avisar que ya cargué,
+		# pero con MultiplayerSpawner, el servidor suele mandar el mando.
+		pass
 
-@rpc("any_peer", "call_remote", "reliable")
-func tell_server_i_am_ready():
-	var id = multiplayer.get_remote_sender_id()
-	add_player(id) # Ahora el Host spawnea al cliente con seguridad
+# Esta función la corre SOLO el servidor
+func _on_peer_connected(id):
+	print("Se ha unido un amigo con ID: ", id)
+	# Un pequeño delay ayuda a que el peer de Steam termine de negociar el P2P
+	await get_tree().create_timer(0.5).timeout
+	add_player(id)
 
 func add_player(id):
+	# Evitar duplicados (por si acaso la señal se dispara dos veces)
+	if spawn_parent.has_node(str(id)):
+		return
+		
 	var player = player_scene.instantiate()
-	player.name = str(id) # IMPORTANTE: El nombre del nodo debe ser el ID
-	spawn_parent.add_child(player)
+	player.name = str(id) # Vital para MultiplayerSynchronizer
+	spawn_parent.add_child(player, true) # true permite que el nombre sea exacto
+	print("Jugador instanciado para ID: ", id)
 
-func _on_peer_connected(id):
-	# Le damos un respiro al cliente para que cargue la escena
-	await get_tree().create_timer(0.2).timeout 
-	add_player(id)
+# Si un amigo se va, limpiamos su personaje
+func _on_peer_disconnected(id):
+	if spawn_parent.has_node(str(id)):
+		spawn_parent.get_node(str(id)).queue_free()

@@ -8,6 +8,20 @@ func _ready():
 	Steam.steamInit(480)
 	Steam.lobby_created.connect(_on_lobby_created)
 	Steam.join_requested.connect(_on_lobby_join_requested)
+	# Señal de Godot: Se activa en el CLIENTE cuando logra conectar con el HOST
+	multiplayer.connected_to_server.connect(_on_conexion_exitosa)
+	# Señal de Godot: Se activa si la conexión falla
+	multiplayer.connection_failed.connect(_on_conexion_fallida)
+	# Revisar si el juego se abrió mediante una invitación de Steam (importante)
+	var args = OS.get_cmdline_args()
+	if args.size() > 0:
+		for arg in args:
+			# Si el argumento es un número de lobby (+connect_lobby ID)
+			if arg == "+connect_lobby":
+				# El siguiente argumento sería el ID
+				var index = args.find(arg)
+				var lobby_invitado = args[index + 1].to_int()
+				unirse_a_partida_por_id(lobby_invitado)
 
 func _process(_delta):
 	# Esto es vital para que Steam envíe las señales a Godot
@@ -51,3 +65,11 @@ func invitar_amigos():
 		Steam.activateGameOverlayInviteDialog(id_del_lobby_actual)
 	else:
 		print("Error: No hay un ID de lobby guardado. ¿Ya hiciste Host?")
+
+func _on_conexion_exitosa():
+	print("¡Conectado al Host exitosamente!")
+	# AQUÍ es donde mandamos al amigo al mundo automáticamente
+	get_tree().change_scene_to_file("res://World.tscn")
+
+func _on_conexion_fallida():
+	print("No se pudo conectar con el amigo.")
