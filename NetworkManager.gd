@@ -43,19 +43,19 @@ func crear_partida_steam():
 func _on_lobby_created(result: int, lobby_id: int):
 	if result == 1:
 		id_del_lobby_actual = lobby_id
-		
-		# 2. IMPORTANTE: Creamos un peer NUEVO exactamente aquí
-		var fresh_peer = SteamMultiplayerPeer.new()
-		var error = fresh_peer.create_host(lobby_id)
-		
-		if error == OK:
-			peer = fresh_peer # Actualizamos nuestra variable global
-			multiplayer.multiplayer_peer = peer
-			print("Lobby creado y Guardado: ", id_del_lobby_actual)
-		else:
-			print("Error crítico al crear Host: ", error) 
+	
+	var fresh_peer = SteamMultiplayerPeer.new()
+	# CAMBIO: Usamos 0, NO el lobby_id
+	var error = fresh_peer.create_host(0) 
+	
+	if error == OK:
+		peer = fresh_peer
+		multiplayer.multiplayer_peer = peer
+		# Opcional: Publicar el nombre para que otros lo vean
+		Steam.setLobbyData(lobby_id, "name", "Partida de " + Steam.getPersonaName())
+		print("Servidor iniciado correctamente en el lobby: ", lobby_id)
 	else:
-		print("Steam no pudo crear el lobby. Resultado: ", result)
+		print("Error al crear el socket (Puerto inválido): ", error)
 # --- LÓGICA DE INVITACIONES ---
 
 # Esto se activa cuando tu amigo te invita y tú aceptas desde el chat de Steam
@@ -64,16 +64,20 @@ func _on_lobby_join_requested(lobby_id: int, friend_id: int):
 	unirse_a_partida_por_id(lobby_id)
 
 func unirse_a_partida_por_id(lobby_id: int):
-	# 1. Limpiamos antes de intentar unirnos
 	multiplayer.multiplayer_peer = null
 	peer = SteamMultiplayerPeer.new()
 	
-	print("Intentando unir al lobby: ", lobby_id)
-	var error = peer.create_client(lobby_id) 
+	# 1. Obtenemos quién es el dueño (Host) de ese lobby
+	var host_id = Steam.getLobbyOwner(lobby_id)
+	
+	print("Intentando conectar con el SteamID del Host: ", host_id)
+	# 2. CAMBIO: Conectamos al host_id, puerto 0
+	var error = peer.create_client(host_id, 0)
+	
 	if error == OK:
 		multiplayer.multiplayer_peer = peer
 	else:
-		print("Error al unirse: ", error)
+		print("Error al intentar conectar: ", error)
 
 # --- EXTRAS ÚTILES ---
 
