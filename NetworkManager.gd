@@ -30,18 +30,26 @@ func _process(_delta):
 # --- LÓGICA DEL ANFITRIÓN (HOST) ---
 
 func crear_partida_steam():
+	# 1. Limpiamos cualquier peer anterior para liberar el socket de Steam
+	multiplayer.multiplayer_peer = null
+	peer = SteamMultiplayerPeer.new() 
+	
 	print("Creando lobby en Steam...")
-	# Creamos el lobby (Tipo Amigos, Max 4 personas)
 	id_del_lobby_actual = 0
 	Steam.createLobby(Steam.LOBBY_TYPE_FRIENDS_ONLY, 4)
 
 func _on_lobby_created(result: int, lobby_id: int):
 	if result == 1:
-		id_del_lobby_actual = lobby_id # <--- Aquí se guarda
+		id_del_lobby_actual = lobby_id
 		var error = peer.create_host(lobby_id)
 		if error == OK:
 			multiplayer.multiplayer_peer = peer
 			print("Lobby creado y Guardado: ", id_del_lobby_actual)
+		else:
+			# Esto te dirá exactamente qué código de error da Godot
+			print("Error crítico al crear Host: ", error) 
+	else:
+		print("Steam no pudo crear el lobby. Resultado: ", result)
 # --- LÓGICA DE INVITACIONES ---
 
 # Esto se activa cuando tu amigo te invita y tú aceptas desde el chat de Steam
@@ -50,7 +58,11 @@ func _on_lobby_join_requested(lobby_id: int, friend_id: int):
 	unirse_a_partida_por_id(lobby_id)
 
 func unirse_a_partida_por_id(lobby_id: int):
-	# Ya no usamos IPs, usamos el ID del Lobby o del Usuario
+	# 1. Limpiamos antes de intentar unirnos
+	multiplayer.multiplayer_peer = null
+	peer = SteamMultiplayerPeer.new()
+	
+	print("Intentando unir al lobby: ", lobby_id)
 	var error = peer.create_client(lobby_id) 
 	if error == OK:
 		multiplayer.multiplayer_peer = peer
