@@ -4,16 +4,16 @@ extends Node3D
 var player_scene = preload("res://Player.tscn")
 
 func _ready():
-	# Solo el Host (servidor) tiene el poder de instanciar nodos que se sincronizan
+	# Esperamos un frame para asegurar que el NetworkManager ya asignó el peer
+	await get_tree().process_frame
+	
+	if multiplayer.multiplayer_peer == null:
+		print("Error: El peer no llegó a tiempo al mundo")
+		return
+
 	if multiplayer.is_server():
-		# Conectamos la señal para detectar nuevos amigos
 		multiplayer.peer_connected.connect(_on_peer_connected)
-		# Nos spawneamos a nosotros mismos (el Host siempre es ID 1)
 		add_player(1)
-	else:
-		# Si soy cliente, opcionalmente puedo avisar que ya cargué,
-		# pero con MultiplayerSpawner, el servidor suele mandar el mando.
-		pass
 
 # Esta función la corre SOLO el servidor
 func _on_peer_connected(id):

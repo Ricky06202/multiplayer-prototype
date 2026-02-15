@@ -30,11 +30,14 @@ func _process(_delta):
 # --- LÓGICA DEL ANFITRIÓN (HOST) ---
 
 func crear_partida_steam():
-	# 1. Limpiamos cualquier peer anterior para liberar el socket de Steam
+	# 1. Cerramos el peer actual de forma segura si existe
+	if multiplayer.multiplayer_peer != null:
+		multiplayer.multiplayer_peer.close()
+	
 	multiplayer.multiplayer_peer = null
 	peer = SteamMultiplayerPeer.new() 
 	
-	print("Creando lobby en Steam...")
+	print("Limpieza de socket completada. Creando lobby...")
 	id_del_lobby_actual = 0
 	Steam.createLobby(Steam.LOBBY_TYPE_FRIENDS_ONLY, 4)
 
